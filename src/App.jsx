@@ -113,16 +113,18 @@ function ActivityDashboard({ onSignOut }) {
         activeTab={mobileTab} 
         setActiveTab={setMobileTab}
         navItems={isCrew ? [
-          { id: 'activity', label: 'Attività', icon: Activity },
-          { id: 'news', label: 'News', icon: Bell },
-          { id: 'profile', label: 'Profilo', icon: User }
+          { id: 'activity', label: 'Vessel Activity', icon: Activity },
+          { id: 'logbook-entry', label: 'Submitted Activity', icon: Edit3 },
+          { id: 'schedule', label: 'Schedule', icon: Calendar },
+          { id: 'profile', label: 'Profile', icon: User }
         ] : [
           { id: 'fleet', label: 'Mappa', icon: MapIcon },
           { id: 'chat', label: 'Messaggi', icon: MessageSquare }
         ]}
       >
-        {mobileTab === 'activity' && <MobileCrewActivity />}
-        {mobileTab === 'news' && <MobileCrewNews />}
+        {mobileTab === 'activity' && <MobileCrewActivity tab="all" />}
+        {mobileTab === 'logbook-entry' && <MobileCrewActivity tab="submitted" />}
+        {mobileTab === 'schedule' && <StandbySchedule />}
         {mobileTab === 'fleet' && (
           <div className="h-[60vh] rounded-xl overflow-hidden shadow-lg border border-surface-low/50">
              <VesselMap height="100%" />
@@ -187,7 +189,7 @@ function ActivityDashboard({ onSignOut }) {
         <nav className="bg-white/50 backdrop-blur-md rounded-[2.5rem] p-2 mb-8 sm:mb-12 border border-white flex flex-wrap items-center gap-1 shadow-sm overflow-x-auto scrollbar-hide">
           {[
             { id: 'activity', label: 'Vessel Activity', icon: Activity },
-            { id: 'logbook-entry', label: 'Submitted Entry', icon: Edit3, permission: perms.submitLogbook || perms.approveLogbook },
+            { id: 'logbook-entry', label: 'Submitted Activity', icon: Edit3, permission: perms.submitLogbook || perms.approveLogbook },
             { id: 'schedule', label: 'Schedule', icon: Calendar, permission: perms.seeSchedule },
             { id: 'rewind', label: 'Rewind', icon: Rewind, permission: perms.seeRewindMap },
             { id: 'production', label: 'Production Targets', icon: Target, permission: perms.seeProductionTargets },

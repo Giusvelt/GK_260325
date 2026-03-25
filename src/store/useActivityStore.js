@@ -20,7 +20,7 @@ export const useActivityStore = create((set, get) => ({
                     duration_minutes, source, status, export_flag,
                     vessels ( name, mmsi ),
                     geofences ( name, nature ),
-                    logbook_entries ( status, structured_fields ),
+                    logbook_entries ( status, structured_fields, created_at ),
                     activity_messages ( id, is_read, sender_role )
                 `)
                 .or('duration_minutes.gte.20,duration_minutes.is.null')
@@ -47,6 +47,7 @@ export const useActivityStore = create((set, get) => ({
                 durationMinutes: row.duration_minutes,
                 status: row.status === 'active' ? 'in-progress' : 'completed',
                 logbookStatus: row.logbook_entries?.[0]?.status || 'none',
+                submittedAt: row.logbook_entries?.[0]?.created_at || null,
                 deliveredQty: row.logbook_entries?.[0]?.structured_fields?.actual_cargo_tonnes || null,
                 msgCount: row.activity_messages?.filter(m => !m.is_read && m.sender_role !== userRole).length || 0,
                 unreadMsgCount: row.activity_messages?.filter(m => !m.is_read && m.sender_role !== userRole).length || 0,
