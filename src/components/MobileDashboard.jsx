@@ -22,7 +22,7 @@ export default function MobileDashboard({ onSignOut, activeTab, setActiveTab, ch
             <Anchor size={20} weight="bold" />
           </div>
           <span className="font-manrope font-extrabold text-xl tracking-tight text-on-surface">
-            GeoKanban <span className="text-primary">V3</span>
+            GeoKanban <span className="text-[10px] font-bold text-primary/40 align-top ml-1">v3.11</span>
           </span>
         </div>
         
