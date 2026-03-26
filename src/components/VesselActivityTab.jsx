@@ -41,7 +41,7 @@ const activityColor = (activity) => {
     return map[activity] || '#94a3b8';
 };
 
-export default function VesselActivityTab() {
+export default function VesselActivityTab({ view = 'all' }) {
     const {
         activities, vessels, geofences, lastUpdate, loading,
         fetchActivities, crewVesselId, companyVesselIds, profile: userProfile, productionPlans, fleetKPIs
@@ -66,12 +66,18 @@ export default function VesselActivityTab() {
         return activities.filter(a => {
             const d = new Date(a.startTime);
             const matchesTime = d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
+            
+            // Filtro Vista (Nuovo)
+            const isSubmitted = ['submitted', 'approved'].includes(a.logbookStatus);
+            if (view === 'submitted' && !isSubmitted) return false;
+            if (view === 'to-submit' && isSubmitted) return false;
+
             if (perms.seeAllVessels) return matchesTime;
             if (perms.seeCompanyVessels && companyVesselIds) return matchesTime && companyVesselIds.includes(a.vesselId);
             if (perms.seeOwnVesselOnly && crewVesselId) return matchesTime && a.vesselId === crewVesselId;
             return matchesTime;
         });
-    }, [activities, selectedMonth, selectedYear, perms, crewVesselId, companyVesselIds]);
+    }, [activities, selectedMonth, selectedYear, perms, crewVesselId, companyVesselIds, view]);
 
     const filtered = useMemo(() => {
         let base = activitiesInPeriod || [];
@@ -164,7 +170,7 @@ export default function VesselActivityTab() {
     return (
         <div className="space-y-6 lg:space-y-8 animate-in fade-in duration-1000 pb-20">
             {/* KPI STATS & ARCHIVE visibili solo agli admin */}
-            {perms.adminDashboard && (
+            {perms.adminDashboard && view === 'all' && (
                 <>
                     {/* KPI STATS ROW */}
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -331,85 +337,98 @@ export default function VesselActivityTab() {
                                     <th className="px-4 py-3">Departed (ATD)</th>
                                     <th className="px-4 py-3">Duration</th>
                                     <th className="px-4 py-3 text-center">Log</th>
-                                    <th className="px-4 py-3 text-right">Comms</th>
+                                    <th className="px-4 py-3 text-right">Ops</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filtered.map((a, i) => (
-                                    <tr key={a.id} className="group">
-                                        <td className="px-4 py-3 bg-white rounded-l-xl text-[10px] font-black text-on-surface/10">{i + 1}</td>
-                                        <td className="px-4 py-3 bg-white font-manrope font-extrabold text-xs text-on-surface uppercase tracking-tight">{a.vessel}</td>
-                                        <td className="px-4 py-3 bg-white">
-                                            <span className="text-[9px] font-black uppercase tracking-tight px-2 py-0.5 rounded-lg border border-current/10" style={{ backgroundColor: `${activityColor(a.activity)}10`, color: activityColor(a.activity) }}>
-                                                {a.activity}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 bg-white text-[11px] font-bold text-on-surface/40 italic truncate max-w-[150px]">
-                                            <div className="flex items-center gap-1.5">
-                                                <MapPin size={10} className="opacity-20 flex-shrink-0" />
-                                                {a.geofence || 'Navigation'}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 bg-white text-[10px] font-bold text-on-surface/60">{formatTime(a.startTime)}</td>
-                                        <td className="px-4 py-3 bg-white text-[10px] font-bold text-on-surface/60">
-                                            {a.endTime ? formatTime(a.endTime) : <span className="text-primary italic animate-pulse">In Progress...</span>}
-                                        </td>
-                                        <td className="px-4 py-3 bg-white text-[9px] font-black text-on-surface/20 uppercase">{calcDuration(a.startTime, a.endTime) || '—'}</td>
-                                        <td className="px-4 py-3 bg-white text-center">
-                                            <div className="flex justify-center">
-                                                {a.logbookStatus === 'submitted' || a.logbookStatus === 'approved' ? (
-                                                    <div className="text-green-500 hover:scale-110 transition-transform cursor-pointer" title="Submitted Entry">
-                                                        <CheckCircle size={18} weight="bold" />
-                                                    </div>
-                                                ) : (
-                                                    <div className="text-on-surface/20" title="Draft / Missing">
-                                                        <FileText size={18} />
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 bg-white rounded-r-xl text-right relative">
-                                            <button 
-                                                onClick={() => setChatActivity(a)} 
-                                                onMouseEnter={() => handleMessageHover(a.id)}
-                                                onMouseLeave={() => setHoverData({ id: null, messages: [], loading: false })}
-                                                className={`w-8 h-8 rounded-full inline-flex items-center justify-center transition-all shadow-sm ${
-                                                    (a.totalMsgCount > 0)
-                                                    ? 'bg-blue-900 text-white hover:bg-blue-800' 
-                                                    : 'bg-surface-low/30 text-on-surface/20 hover:bg-secondary hover:text-white'
-                                                }`}
-                                            >
-                                                <MessageSquare size={13} />
-                                                {a.unreadMsgCount > 0 && (
-                                                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white pointer-events-none" />
-                                                )}
-                                            </button>
-
-                                            {/* MESSAGE TOOLTIP (VIGNETTA) */}
-                                            {hoverData.id === a.id && !hoverData.loading && hoverData.messages.length > 0 && (
-                                                <div className="absolute bottom-full right-4 mb-2 z-50 w-64 bg-[#002B5B] text-white p-3 rounded-2xl shadow-xl animate-in zoom-in-95 fade-in duration-200 pointer-events-none">
-                                                    <div className="space-y-2">
-                                                        {hoverData.messages.map((m, idx) => (
-                                                            <div key={idx} className="flex items-start gap-2 text-[10px] font-bold leading-tight">
-                                                                <span className="flex-shrink-0 opacity-50 mt-0.5">
-                                                                    {m.sender_role === 'crew' ? '📤' : '📥'}
-                                                                </span>
-                                                                <p className="text-left line-clamp-2 italic">{m.message_text}</p>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                    {/* Triangle pointer */}
-                                                    <div className="absolute top-full right-4 -mt-1 w-3 h-3 bg-[#002B5B] rotate-45" />
+                                {filtered.map((a, i) => {
+                                    const isSubmitted = ['submitted', 'approved'].includes(a.logbookStatus);
+                                    
+                                    return (
+                                        <tr key={a.id} className="group">
+                                            <td className="px-4 py-3 bg-white rounded-l-xl text-[10px] font-black text-on-surface/10">{i + 1}</td>
+                                            <td className="px-4 py-3 bg-white font-manrope font-extrabold text-xs text-on-surface uppercase tracking-tight">{a.vessel}</td>
+                                            <td className="px-4 py-3 bg-white">
+                                                <span className="text-[9px] font-black uppercase tracking-tight px-2 py-0.5 rounded-lg border border-current/10" style={{ backgroundColor: `${activityColor(a.activity)}10`, color: activityColor(a.activity) }}>
+                                                    {a.activity}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 bg-white text-[11px] font-bold text-on-surface/40 italic truncate max-w-[150px]">
+                                                <div className="flex items-center gap-1.5">
+                                                    <MapPin size={10} className="opacity-20 flex-shrink-0" />
+                                                    {a.geofence || 'Navigation'}
                                                 </div>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))}
+                                            </td>
+                                            <td className="px-4 py-3 bg-white text-[10px] font-bold text-on-surface/60">{formatTime(a.startTime)}</td>
+                                            <td className="px-4 py-3 bg-white text-[10px] font-bold text-on-surface/60">
+                                                {a.endTime ? formatTime(a.endTime) : <span className="text-primary italic animate-pulse">In Progress...</span>}
+                                            </td>
+                                            <td className="px-4 py-3 bg-white text-[9px] font-black text-on-surface/20 uppercase">{calcDuration(a.startTime, a.endTime) || '—'}</td>
+                                            <td className="px-4 py-3 bg-white text-center">
+                                                <div className="flex justify-center items-center gap-2">
+                                                    {isSubmitted ? (
+                                                        <div className="text-green-500 hover:scale-110 transition-transform cursor-pointer" title="Submitted Entry">
+                                                            <CheckCircle size={18} weight="bold" />
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center gap-1.5">
+                                                            <div className="text-on-surface/20" title="Draft / Missing">
+                                                                <FileText size={18} />
+                                                            </div>
+                                                            <button 
+                                                                onClick={() => setLogbookActivity(a)}
+                                                                className="flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-primary hover:text-white transition-all group"
+                                                            >
+                                                                <Edit3 size={12} className="group-hover:scale-110 transition-transform" />
+                                                                Edit
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 bg-white rounded-r-xl text-right relative">
+                                                <button 
+                                                    onClick={() => setChatActivity(a)} 
+                                                    onMouseEnter={() => handleMessageHover(a.id)}
+                                                    onMouseLeave={() => setHoverData({ id: null, messages: [], loading: false })}
+                                                    className={`w-8 h-8 rounded-full inline-flex items-center justify-center transition-all shadow-sm ${
+                                                        (a.totalMsgCount > 0)
+                                                        ? 'bg-blue-900 text-white hover:bg-blue-800' 
+                                                        : 'bg-surface-low/30 text-on-surface/20 hover:bg-secondary hover:text-white'
+                                                    }`}
+                                                >
+                                                    <MessageSquare size={13} />
+                                                    {a.unreadMsgCount > 0 && (
+                                                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white pointer-events-none" />
+                                                    )}
+                                                </button>
+
+                                                {/* MESSAGE TOOLTIP (VIGNETTA) */}
+                                                {hoverData.id === a.id && !hoverData.loading && hoverData.messages.length > 0 && (
+                                                    <div className="absolute bottom-full right-4 mb-2 z-50 w-64 bg-[#002B5B] text-white p-3 rounded-2xl shadow-xl animate-in zoom-in-95 fade-in duration-200 pointer-events-none">
+                                                        <div className="space-y-2">
+                                                            {hoverData.messages.map((m, idx) => (
+                                                                <div key={idx} className="flex items-start gap-2 text-[10px] font-bold leading-tight">
+                                                                    <span className="flex-shrink-0 opacity-50 mt-0.5">
+                                                                        {m.sender_role === 'crew' ? '📤' : '📥'}
+                                                                    </span>
+                                                                    <p className="text-left line-clamp-2 italic">{m.message_text}</p>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        {/* Triangle pointer */}
+                                                        <div className="absolute top-full right-4 -mt-1 w-3 h-3 bg-[#002B5B] rotate-45" />
+                                                    </div>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                         {!filtered.length && (
                             <div className="py-12 text-center text-on-surface/40 font-bold text-sm">
-                                Nessuna attività trovata in questo periodo.
+                                No activities found in this period.
                             </div>
                         )}
                     </div>

@@ -85,8 +85,8 @@ function ActivityDashboard({ onSignOut }) {
         >
           {(() => {
             switch(activeTab) {
-              case 'activity': return <VesselActivityTab />;
-              case 'logbook-entry': return <LogbookWriterTab />;
+              case 'activity': return <VesselActivityTab view="to-submit" />;
+              case 'logbook-entry': return <VesselActivityTab view="submitted" />;
               case 'schedule': return <StandbySchedule />;
               case 'rewind': return <RewindMapTab />;
               case 'production': return <ProductionTargetTab />;
